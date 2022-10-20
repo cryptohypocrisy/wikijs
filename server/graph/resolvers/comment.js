@@ -43,7 +43,7 @@ module.exports = {
       const page = await WIKI.models.pages.query().select('id').findOne({ localeCode: args.locale, path: args.path })
       if (page) {
         if (WIKI.auth.checkAccess(context.req.user, ['read:comments'], args)) {
-          const comments = await WIKI.models.comments.query().where('pageId', page.id).orderBy('createdAt')
+          const comments = await WIKI.models.comments.query().where('pageId', page.id).orderBy('createdAt', 'desc')
           return comments.map(c => ({
             ...c,
             authorName: c.name,
