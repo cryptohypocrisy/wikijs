@@ -65,7 +65,8 @@ module.exports = {
               content: { type: 'text', boost: 1.0 },
               locale: { type: 'keyword' },
               path: { type: 'text' },
-              tags: { type: 'text', boost: 8.0 }
+              tags: { type: 'text', boost: 8.0 },
+              comments: { type: 'text', boost: 1.0 } // index comments; text property stored in Page.extra.comment
             }
           }
           await this.client.indices.create({
@@ -107,7 +108,7 @@ module.exports = {
           query: {
             simple_query_string: {
               query: `*${q}*`,
-              fields: ['title^20', 'description^3', 'tags^8', 'content^1'],
+              fields: ['title^20', 'description^3', 'tags^8', 'content^1', 'comments^1'], // add query commentsX1
               default_operator: 'and',
               analyze_wildcard: true
             }
@@ -191,7 +192,8 @@ module.exports = {
         title: page.title,
         description: page.description,
         content: page.safeContent,
-        tags: await this.buildTags(page.id)
+        tags: await this.buildTags(page.id),
+        comments: page.extra.comment // add comments to index property on create
       },
       refresh: true
     })
@@ -213,7 +215,8 @@ module.exports = {
         title: page.title,
         description: page.description,
         content: page.safeContent,
-        tags: await this.buildTags(page.id)
+        tags: await this.buildTags(page.id),
+        comments: page.extra.comment // add comments to index property on update
       },
       refresh: true
     })
@@ -254,7 +257,8 @@ module.exports = {
         title: page.title,
         description: page.description,
         content: page.safeContent,
-        tags: await this.buildTags(page.id)
+        tags: await this.buildTags(page.id),
+        comments: page.extra.comment // add comments to index property on rename
       },
       refresh: true
     })
@@ -326,7 +330,8 @@ module.exports = {
               path: doc.path,
               title: doc.title,
               description: doc.description,
-              content: doc.safeContent
+              content: doc.safeContent,
+              comments: doc.extra.comment // add comments to index property on rebuild
             })
             return result
           }, []),
@@ -339,9 +344,10 @@ module.exports = {
       bytes = 0
     }
 
+    // Add 'extra' field
     // Added real id in order to fetch page tags from the query
     await pipeline(
-      WIKI.models.knex.column({ id: 'hash' }, 'path', { locale: 'localeCode' }, 'title', 'description', 'render', { realId: 'id' }).select().from('pages').where({
+      WIKI.models.knex.column({ id: 'hash' }, 'path', { locale: 'localeCode' }, 'extra', 'title', 'description', 'render', { realId: 'id' }).select().from('pages').where({
         isPublished: true,
         isPrivate: false
       }).stream(),
